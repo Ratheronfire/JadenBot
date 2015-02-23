@@ -4,8 +4,10 @@ import json
 import os
 import traceback
 import sys
+import re
 from wordnik import *
 from urllib2 import HTTPError
+from random import choice
 
 def load_config():
 	if os.access("config.json", os.F_OK):
@@ -38,16 +40,31 @@ parts_of_speech = config["parts-of-speech"]
 api = init_api()
 wordsApi = WordsApi.WordsApi(api)
 
+def generate_sentence():
+	words = choice(config["sentences"]).split(' ')
+	sentence = ""
+
+	for word in words:
+		word = re.sub("\[|\]", "", word)
+		if word in config["parts-of-speech"]:
+			word = get_word(word)
+			word = word.capitalize()
+		
+		if word in "?!.":
+			sentence = sentence.rstrip()
+			sentence += word
+		else:
+			sentence += word + " "
+	
+	return sentence
+
 def main():
 	load_config()
 
 	global parts_of_speech
 	parts_of_speech = config["parts-of-speech"]
 
-	for part in parts_of_speech:
-		word = get_word(part)
-		if word is not None:
-			print part, word
+	print generate_sentence()
 
 if __name__ == "__main__":
 	main()
