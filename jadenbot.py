@@ -1,43 +1,53 @@
 __author__ = 'David'
 
-import requests
 import json
 import os
-
-config = dict()
+import traceback
+import sys
+from wordnik import *
+from urllib2 import HTTPError
 
 def load_config():
-    if os.access("config.json", os.F_OK):
-        with open("config.json", "r", encoding="utf8") as config_file:
-            config = json.load(config_file)
+	if os.access("config.json", os.F_OK):
+		with open("config.json", "r") as config_file:
+			config = json.load(config_file)
+	
+	return config
 
-    return config
+def init_api():
+	return swagger.ApiClient(config["api-key"], config["base-url"])
 
-def send_get_request(url):
-    response_json = dict()
+def get_word(partOfSpeech):
+	try:
+		response = wordsApi.getRandomWord(includePartOfSpeech=partOfSpeech, \
+			minLength=config["min-length"], \
+			maxLength=config["max-length"], \
+			minCorpusCount=config["min-corpus-count"], \
+			maxCorpusCount=config["max-corpus-count"])
 
-    try:
-        response_json = requests.get(url).json()
-    except Exception as e:
-        print("Error trying to send GET request for {0}\n Error {1} - {2}".format(url, type(e), e.args))
+		if response is not None:
+			return response.word
+	except HTTPError:
+		print "Error finding word of type " + partOfSpeech
+		traceback.print_exc(file=sys.stderr)
 
-    return response_json
+	return None
 
-def get_word(partOfSpeech, minLength, maxLength):
-    url = config["base-url"] + "randomWord?hasDictionaryDef=false&includePartOfSpeech=" + partOfSpeech + \
-                               "&minCorpusCount=0&maxCorpusCount=-1&minDictionaryCount=1&maxDictionaryCount=-1" \
-                               "&MinLength=" + str(minLength) + "&maxLength=" + str(maxLength) + "&api_key=" + config["api-key"]
-
-    response = send_get_request(url)
-
-    return response["word"]
-
+config = load_config()
+parts_of_speech = config["parts-of-speech"]
+api = init_api()
+wordsApi = WordsApi.WordsApi(api)
 
 def main():
-    global config
-    config = load_config()
-    print(get_word("noun", 5, -1))
+	load_config()
 
+	global parts_of_speech
+	parts_of_speech = config["parts-of-speech"]
+
+	for part in parts_of_speech:
+		word = get_word(part)
+		if word is not None:
+			print part, word
 
 if __name__ == "__main__":
-    main()
+	main()
