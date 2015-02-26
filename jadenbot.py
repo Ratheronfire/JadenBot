@@ -8,6 +8,7 @@ import re
 from wordnik import *
 from urllib2 import HTTPError
 from random import choice
+import jaden_irc
 
 default_config = { "api-key": "", "parts-of-speech": 
 	[ "noun", "adjective", "verb", "adverb", "interjection", "pronoun",
@@ -19,9 +20,9 @@ default_config = { "api-key": "", "parts-of-speech":
 	"verb-intransitive", "verb-transitive" ],
 	"base-url": "http://api.wordnik.com/v4",
 	"min-length": 5, "max-length": 9,
-	"min-corpus-count": 5000, "max-corpus-count": -1,
+	"min-corpus-count": 200, "max-corpus-count": -1,
 	"sentences":
-	[ "How Can [noun] Be [adjective] If Our [noun] Aren't [adjective] ?" ]
+	[ "How Can [noun-plural] Be [adjective] If Our [noun-plural] Aren't [adjective] ?" ]
 }
 
 def prompt_for_api_key():
@@ -77,7 +78,7 @@ def generate_sentence():
 
 	for source_word in words:
 		source_word = re.sub("\[|\]", "", source_word)
-		if source_word in config["parts-of-speech"]:
+		if source_word.lower() in config["parts-of-speech"]:
 			word = get_word(source_word)
 			word = word.capitalize()
 		else:
@@ -97,7 +98,9 @@ def main():
 	global parts_of_speech
 	parts_of_speech = config["parts-of-speech"]
 
-	print generate_sentence()
+	irc_bot = jaden_irc.JadenBot(config["channel"], config["nick"], config["server"], config)
+	irc_bot.start()
+
 
 if __name__ == "__main__":
 	main()
