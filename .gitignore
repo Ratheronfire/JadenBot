@@ -2,3 +2,5 @@
 config.json~
 *.py~
 config.json
+*.pyc
+idea/

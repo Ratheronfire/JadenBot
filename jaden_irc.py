@@ -41,7 +41,7 @@ class JadenBot(irc.bot.SingleServerIRCBot):
                 print "Exiting now."
                 self.die()
             else:
-                print user.nick + " is not authorized to kill bot."
+                print user + " is not authorized to kill bot."
                 c.privmsg(self.channel, "JadenBot never dies")
     
     def on_privmsg(self, c, e):
