@@ -1,27 +1,45 @@
 __author__ = 'David'
 
+import logging
 import irc.bot
 import irc.strings
 from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
-from jadenbot import generate_sentence
+from jadenbot import generate_sentence, load_config
 
 class JadenBot(irc.bot.SingleServerIRCBot):
     config = dict()
 
     def __init__(self, channel, nickname, server, config, port=6667):
+        irc.client.ServerConnection.buffer_class = irc.buffer.LenientDecodingLineBuffer
+
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+
         self.channel = channel
         self.config = config
 
-        print "Joining " + channel + " on " + server + ":" + str(port) + " as " + nickname
+        global jaden_log
+        jaden_log = logging.getLogger("jaden")
+        logging.basicConfig(filename="jaden.log", level=logging.DEBUG)
+
+        console_log = logging.StreamHandler()
+        console_log.setLevel(logging.DEBUG)
+
+        logging.getLogger('jaden').addHandler(console_log)
+
+        jaden_log.info("Joining " + channel + " on " + server + ":" + str(port) + " as " + nickname)
 
     def print_sentence(self, c, e):
-        print "Read command " + self.config["command-string"] + " from " + e.source.nick
+        jaden_log.info("Read command " + self.config["command-string"] + " from " + e.source.nick)
 
         sentence = generate_sentence()
             
-        print(sentence)
+        jaden_log.info(sentence)
         c.privmsg(self.channel, sentence)
+
+    def reload_config(self):
+        global config
+
+        config = load_config()
 
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
@@ -30,37 +48,43 @@ class JadenBot(irc.bot.SingleServerIRCBot):
         c.join(self.channel)
 
     def on_pubmsg(self, c, e):
-        msg = e.arguments[0]
         user = e.source.nick
+
+        msg = e.arguments[0]
 
         if msg == self.config["command-string"]:
             self.print_sentence(c, e)
+        elif msg == "!reload":
+            self.reload_config()
         elif msg.lower() == "jadenbot die":
-            print "Read exit command from " + user
+            jaden_log.info("Read exit command from " + user)
             if user.lower() in self.config["bot-ops"]:
-                print "Exiting now."
+                jaden_log.info("Exiting now.")
                 self.die()
             else:
-                print user + " is not authorized to kill bot."
+                jaden_log.warning(user + " is not authorized to kill bot.")
                 c.privmsg(self.channel, "JadenBot never dies")
     
     def on_privmsg(self, c, e):
         msg = e.arguments[0]
         msg_words = msg.split()
+        command = msg_words[0]
+
         user = e.source.nick
 
         if user.lower() in self.config["bot-ops"]:
-            print "Authorized user " + user + " issued private command " + msg
-            if msg_words[0] == "!say":
+            jaden_log.info("Authorized user " + user + " issued private command " + msg)
+            if command == "!say":
                 c.privmsg(self.channel, msg.replace("!say ", ""))
-            elif msg_words[0] == "!jaden":
+            elif command == "!reload":
+                self.reload_config()
+            elif command == "!jaden":
                 self.print_sentence(c, e)
-            elif msg_words[0] == "!quit":
-                print "Exiting now."
+            elif command == "!quit":
+                jaden_log.info("Exiting now.")
                 self.die()
             else:
-                print "Unrecognized command."
+                jaden_log.debug("Unrecognized command.")
                 c.privmsg(user, "Unrecognized command.")
         else:
-            print "Unauthorized user " + user + " issued private command " + msg
-
+            jaden_log.warning("Unauthorized user " + user + " issued private command " + msg)

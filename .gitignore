@@ -1,6 +1,6 @@
 *.swp
-config.json~
-*.py~
+*~
 config.json
 *.pyc
-idea/
+idea
+jaden.log
